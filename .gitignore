@@ -1,0 +1,29 @@
+# Arquivos do Gradle
+.gradle/
+build/
+out/
+classes/
+
+# Arquivos do IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+bin/
+.vscode/
+
+# Arquivos do Minecraft/Forge
+run/
+logs/
+crash-reports/
+saves/
+screenshots/
+*.log
+
+# Arquivos do Sistema Operacional
+.DS_Store
+desktop.ini
+Thumbs.db 
