@@ -17,7 +17,7 @@ git init
 git add .
 git commit -m "Commit inicial"
 git branch -M main
-git remote add origin seu-repositorio-aqui
+git remote add origin https://github.com/jonatasperaza/Minecraft-admin-logger
 git push -u origin main
 ```
 
