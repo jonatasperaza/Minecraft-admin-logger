@@ -6,6 +6,8 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,8 +20,12 @@ public class AdminLogger {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
     private static final String LOG_DIRECTORY = "logs/adminlogger/";
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public AdminLogger() {
+        LOGGER.info("Admin Logger v1.0 para Minecraft 1.20.1 iniciado com sucesso!");
+        LOGGER.info("Desenvolvido por jonatasperaza");
+        
         MinecraftForge.EVENT_BUS.register(this);
         createLogDirectory();
     }
