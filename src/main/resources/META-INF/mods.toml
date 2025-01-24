@@ -1,27 +1,26 @@
 modLoader="javafml"
-loaderVersion="[45,)"
+loaderVersion="[47,)"
 license="MIT"
 
 [[mods]]
 modId="adminlogger"
-version="1.0.0"
+version="1.1"
 displayName="Admin Logger"
-authors="Your Name"
+authors="jonatasperaza"
 description='''
-Um mod que registra as atividades dos jogadores no servidor Minecraft.
-Registra entradas, saídas, mensagens de chat e comandos executados.
+Um mod que registra ações administrativas e mensagens do chat no servidor.
 '''
 
 [[dependencies.adminlogger]]
-    modId="forge"
-    mandatory=true
-    versionRange="[45,)"
-    ordering="NONE"
-    side="SERVER"
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="SERVER"
 
 [[dependencies.adminlogger]]
-    modId="minecraft"
-    mandatory=true
-    versionRange="[1.19.4,1.20)"
-    ordering="NONE"
-    side="SERVER" 
+modId="minecraft"
+mandatory=true
+versionRange="[1.20,1.21)"
+ordering="NONE"
+side="SERVER" 
