@@ -1,0 +1,13 @@
+#Configurações do Admin Logger
+
+#Idioma do mod (en_us = English, pt_br = Português Brasil)
+language = "pt_br"
+
+#Habilitar registro de chat
+logChat = true
+
+#Habilitar registro de comandos
+logCommands = true
+
+#Habilitar registro de inventário
+logInventory = false 

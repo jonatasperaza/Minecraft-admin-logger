@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="adminlogger"
-version="1.1"
+version="1.2"
 displayName="Admin Logger"
 authors="jonatasperaza"
 description='''
