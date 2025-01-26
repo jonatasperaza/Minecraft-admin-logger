@@ -12,14 +12,14 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.0'
+version = '1.2'
 group = 'com.adminlogger'
 archivesBaseName = 'admin-logger'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    mappings channel: 'official', version: '1.19.4'
+    mappings channel: 'official', version: '1.20.1'
     
     runs {
         client {
@@ -57,7 +57,7 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:1.19.4-45.1.0"
+    minecraft "net.minecraftforge:forge:1.20.1-47.1.0"
     
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }

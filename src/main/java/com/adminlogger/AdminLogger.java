@@ -6,20 +6,35 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.server.ServerLifecycleHooks;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import com.adminlogger.config.AdminLoggerConfig;
+
 
 @Mod("adminlogger")
 public class AdminLogger {
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
     private static final String LOG_DIRECTORY = "logs/adminlogger/";
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public AdminLogger() {
+        AdminLoggerConfig.register();
+        
+        LOGGER.info("Admin Logger v1.0 para Minecraft 1.20.1 iniciado com sucesso!");
+        LOGGER.info("Desenvolvido por jonatasperaza");
+        
         MinecraftForge.EVENT_BUS.register(this);
         createLogDirectory();
     }
@@ -57,7 +72,16 @@ public class AdminLogger {
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         String playerName = event.getEntity().getName().getString();
-        logEvent(playerName, "entrou no servidor", "action");
+        double x = event.getEntity().getX();
+        double y = event.getEntity().getY();
+        double z = event.getEntity().getZ();
+        String coords = String.format("(x:%.2f, y:%.2f, z:%.2f)", x, y, z);
+        logEvent(playerName, "entrou no servidor em " + coords, "action");
+        
+        // Adicionar log do inventário no login
+        if (event.getEntity() instanceof Player) {
+            logInventory((Player) event.getEntity());
+        }
     }
 
     @SubscribeEvent
@@ -68,8 +92,12 @@ public class AdminLogger {
 
     @SubscribeEvent
     public void onServerChat(ServerChatEvent event) {
-        String playerName = event.getPlayer().getName().getString();
-        logEvent(playerName, "disse: " + event.getMessage(), "chat");
+        if (AdminLoggerConfig.LOG_CHAT.get()) {
+            String playerName = event.getPlayer().getName().getString();
+            String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+                "disse: " : "said: ";
+            logEvent(playerName, message + event.getMessage(), "chat");
+        }
     }
 
     @SubscribeEvent
@@ -77,7 +105,55 @@ public class AdminLogger {
         if (event.getParseResults().getContext().getSource().getEntity() != null) {
             String playerName = event.getParseResults().getContext().getSource().getEntity().getName().getString();
             String command = event.getParseResults().getReader().getString();
-            logEvent(playerName, "executou comando: " + command, "action");
+            
+            // Verificar atividades suspeitas
+            checkForSuspiciousActivity(playerName, command);
+            
+            // Ignorar comandos específicos para não sobrecarregar o log
+            if (!command.startsWith("/tell") && !command.startsWith("/msg")) {
+                logEvent(playerName, "executou comando: " + command, "action");
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onPlayerDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+            String playerName = player.getName().getString();
+            
+            if (event.getSource().getEntity() instanceof Player) {
+                Player killer = (Player) event.getSource().getEntity();
+                logEvent(playerName, "foi morto por " + killer.getName().getString(), "action");
+            } else {
+                logEvent(playerName, "morreu por " + event.getSource().getMsgId(), "action");
+            }
+        }
+    }
+
+    private void logInventory(Player player) {
+        StringBuilder items = new StringBuilder();
+        player.getInventory().items.forEach(itemStack -> {
+            if (!itemStack.isEmpty()) {
+                items.append(itemStack.getCount())
+                     .append("x ")
+                     .append(itemStack.getDisplayName().getString())
+                     .append(", ");
+            }
+        });
+        logEvent(player.getName().getString(), "inventário: " + items.toString(), "inventory");
+    }
+
+    private void checkForSuspiciousActivity(String playerName, String action) {
+        if (action.contains("gamemode creative") || action.contains("op")) {
+            // Notificar admins online
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            server.getPlayerList().getPlayers().forEach(player -> {
+                if (server.getPlayerList().isOp(player.getGameProfile())) {
+                    player.sendSystemMessage(Component.literal("§c[AdminLogger] Ação suspeita: " + 
+                        playerName + " " + action));
+                }
+            });
         }
     }
 } 
