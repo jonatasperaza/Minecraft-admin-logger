@@ -68,8 +68,8 @@ git pull               # Atualizar repositório
 
 ## Requisitos
 
-- Minecraft 1.19.4
-- Forge 45.1.0 ou superior
+- Minecraft 1.20.1, 1.21
+- Forge 47 ou superior
 
 ## Instalação
 
