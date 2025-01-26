@@ -31,9 +31,12 @@ public class AdminLogger {
 
     public AdminLogger() {
         AdminLoggerConfig.register();
-        
-        LOGGER.info("Admin Logger v1.0 para Minecraft 1.20.1 iniciado com sucesso!");
-        LOGGER.info("Desenvolvido por jonatasperaza");
+        String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ?     
+            "Admin Logger v1.0 para Minecraft 1.20.1 iniciado com sucesso!" : "Admin Logger v1.0 for Minecraft 1.20.1 started successfully!";
+        LOGGER.info(message);
+        message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+            "Desenvolvido por jonatasperaza" : "Developed by jonatasperaza";
+        LOGGER.info(message);
         
         MinecraftForge.EVENT_BUS.register(this);
         createLogDirectory();
@@ -76,7 +79,9 @@ public class AdminLogger {
         double y = event.getEntity().getY();
         double z = event.getEntity().getZ();
         String coords = String.format("(x:%.2f, y:%.2f, z:%.2f)", x, y, z);
-        logEvent(playerName, "entrou no servidor em " + coords, "action");
+        String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+            "entrou no servidor em " : "logged in to the server at ";
+        logEvent(playerName, message + coords, "action");
         
         // Adicionar log do inventário no login
         if (event.getEntity() instanceof Player) {
@@ -87,7 +92,9 @@ public class AdminLogger {
     @SubscribeEvent
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         String playerName = event.getEntity().getName().getString();
-        logEvent(playerName, "saiu do servidor", "action");
+        String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+            "saiu do servidor" : "logged out of the server";
+        logEvent(playerName, message, "action");
     }
 
     @SubscribeEvent
@@ -111,7 +118,9 @@ public class AdminLogger {
             
             // Ignorar comandos específicos para não sobrecarregar o log
             if (!command.startsWith("/tell") && !command.startsWith("/msg")) {
-                logEvent(playerName, "executou comando: " + command, "action");
+                String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+                    "executou comando: " : "executed command: ";
+                logEvent(playerName, message + command, "action");
             }
         }
     }
@@ -126,7 +135,9 @@ public class AdminLogger {
                 Player killer = (Player) event.getSource().getEntity();
                 logEvent(playerName, "foi morto por " + killer.getName().getString(), "action");
             } else {
-                logEvent(playerName, "morreu por " + event.getSource().getMsgId(), "action");
+                String message = AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? 
+                    "morreu por " : "died by ";
+                logEvent(playerName, message + event.getSource().getMsgId(), "action");
             }
         }
     }
