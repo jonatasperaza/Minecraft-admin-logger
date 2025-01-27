@@ -1,8 +1,6 @@
 package com.adminlogger.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber
@@ -12,35 +10,35 @@ public class AdminLoggerConfig {
     public static ForgeConfigSpec.BooleanValue LOG_INVENTORY;
     public static ForgeConfigSpec.EnumValue<Language> LANGUAGE;
     
-    public static final ForgeConfigSpec SPEC;
+    private static final ForgeConfigSpec SPEC;
     
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        init(builder);
+        setupConfig(builder);
         SPEC = builder.build();
     }
     
-    public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    public static ForgeConfigSpec getSpec() {
+        return SPEC;
     }
     
-    public static void init(ForgeConfigSpec.Builder builder) {
-        builder.comment("Configurações do Admin Logger");
+    private static void setupConfig(ForgeConfigSpec.Builder builder) {
+        builder.comment("Admin Logger Configuration");
         
         LANGUAGE = builder
-            .comment("Idioma do mod (en_us = English, pt_br = Português Brasil)")
+            .comment("Mod language (en_us = English, pt_br = Português Brasil)")
             .defineEnum("language", Language.pt_br);
             
         LOG_CHAT = builder
-            .comment("Habilitar registro de chat")
+            .comment("Enable chat logging")
             .define("logChat", true);
             
         LOG_COMMANDS = builder
-            .comment("Habilitar registro de comandos")
+            .comment("Enable command logging")
             .define("logCommands", true);
             
         LOG_INVENTORY = builder
-            .comment("Habilitar registro de inventário")
+            .comment("Enable inventory logging")
             .define("logInventory", false);
     }
     
@@ -48,4 +46,4 @@ public class AdminLoggerConfig {
         en_us,
         pt_br
     }
-} 
+}
