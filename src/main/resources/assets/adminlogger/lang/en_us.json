@@ -1,0 +1,8 @@
+{
+    "login": "[%s] logged in at %s",
+    "logout": "[%s] logged out",
+    "chat": "[%s] said: %s",
+    "command": "[%s] executed: %s",
+    "death.by.player": "[%s] was killed by %s",
+    "death.generic": "[%s] died by %s"
+}

@@ -8,14 +8,14 @@ public class AdminLoggerConfig {
     public static ForgeConfigSpec.BooleanValue LOG_CHAT;
     public static ForgeConfigSpec.BooleanValue LOG_COMMANDS;
     public static ForgeConfigSpec.BooleanValue LOG_INVENTORY;
-    public static ForgeConfigSpec.EnumValue<Language> LANGUAGE;
+    public static ForgeConfigSpec.ConfigValue<String> LANGUAGE;
     
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     private static final ForgeConfigSpec SPEC;
     
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-        setupConfig(builder);
-        SPEC = builder.build();
+        setupConfig(BUILDER);
+        SPEC = BUILDER.build();
     }
     
     public static ForgeConfigSpec getSpec() {
@@ -23,11 +23,11 @@ public class AdminLoggerConfig {
     }
     
     private static void setupConfig(ForgeConfigSpec.Builder builder) {
-        builder.comment("Admin Logger Configuration");
+        builder.push("general");
         
         LANGUAGE = builder
-            .comment("Mod language (en_us = English, pt_br = Português Brasil)")
-            .defineEnum("language", Language.pt_br);
+            .comment("Mod language (e.g., en_us, pt_br)")
+            .define("language", "pt_br");
             
         LOG_CHAT = builder
             .comment("Enable chat logging")
@@ -40,10 +40,7 @@ public class AdminLoggerConfig {
         LOG_INVENTORY = builder
             .comment("Enable inventory logging")
             .define("logInventory", false);
-    }
-    
-    public enum Language {
-        en_us,
-        pt_br
+            
+        builder.pop();
     }
 }
