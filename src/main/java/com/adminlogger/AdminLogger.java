@@ -1,5 +1,7 @@
 package com.adminlogger;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -8,6 +10,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,6 +20,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.nio.charset.StandardCharsets;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -28,23 +34,50 @@ public class AdminLogger {
     private static final String LOG_DIRECTORY = "logs/adminlogger/";
     private static final int MAX_LOG_SIZE_MB = 5;
     private static final Logger LOGGER = LogManager.getLogger(MOD_ID);
+    private static Map<String, String> languageMap = new HashMap<>();
 
     public AdminLogger() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modEventBus.addListener(this::onConfigLoad);
+        
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AdminLoggerConfig.getSpec());
-        
         MinecraftForge.EVENT_BUS.register(this);
-        
         createLogDirectory();
         
-        LOGGER.info("Admin Logger v1.3 for Minecraft 1.20.1 started successfully!");
+        LOGGER.info("Admin Logger v1.4 for Minecraft 1.20.1 initialized!");
     }
 
-    private String getLocalizedMessage(String enMessage, String ptMessage) {
+    private void loadLanguage(String langCode) {
+        String langFile = "assets/adminlogger/lang/" + langCode + ".json";
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(langFile)) {
+            languageMap.clear();
+            if (inputStream != null) {
+                String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
+                jsonObject.entrySet().forEach(entry -> 
+                    languageMap.put(entry.getKey(), entry.getValue().getAsString())
+                );
+            } else {
+                LOGGER.warn("Language file {} not found! Loading English...", langFile);
+                loadLanguage("en_us");
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to load language file: {}", langFile, e);
+        }
+    }
+
+    private void onConfigLoad(final ModConfigEvent.Loading event) {
+        loadLanguage(AdminLoggerConfig.LANGUAGE.get());
+        LOGGER.info("Admin Logger config loaded successfully!");
+    }
+
+    private String getLocalizedMessage(String key, Object... args) {
+        String message = languageMap.getOrDefault(key, key);
         try {
-            return AdminLoggerConfig.LANGUAGE.get() == AdminLoggerConfig.Language.pt_br ? ptMessage : enMessage;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to get localized message, defaulting to English", e);
-            return enMessage;
+            return String.format(message, args);
+        } catch (MissingFormatArgumentException e) {
+            LOGGER.warn("Format mismatch for key '{}': {}", key, e.getMessage());
+            return message;
         }
     }
 
@@ -67,13 +100,11 @@ public class AdminLogger {
     private void logEvent(String playerName, String action, String type) {
         try {
             createPlayerDirectory(playerName);
-
             String date = DATE_FORMAT.format(new Date());
             String time = TIME_FORMAT.format(new Date());
             Path logPath = Paths.get(LOG_DIRECTORY, playerName, date + "-" + type + ".log");
             manageLogSize(logPath);
 
-            Files.createDirectories(logPath.getParent());
             try (BufferedWriter writer = Files.newBufferedWriter(logPath, 
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
                 writer.write(String.format("[%s] %s%n", time, action));
@@ -98,11 +129,8 @@ public class AdminLogger {
             String playerName = player.getName().getString();
             String coords = String.format("(x:%.2f, y:%.2f, z:%.2f)", 
                 player.getX(), player.getY(), player.getZ());
-            String message = getLocalizedMessage(
-                "logged in to the server at ",
-                "entrou no servidor em "
-            );
-            logEvent(playerName, message + coords, "actions");
+            String message = getLocalizedMessage("login", playerName, coords);
+            logEvent(playerName, message, "actions");
         }
     }
 
@@ -111,10 +139,7 @@ public class AdminLogger {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
             String playerName = player.getName().getString();
-            String message = getLocalizedMessage(
-                "logged out of the server",
-                "saiu do servidor"
-            );
+            String message = getLocalizedMessage("logout", playerName);
             logEvent(playerName, message, "actions");
         }
     }
@@ -123,8 +148,10 @@ public class AdminLogger {
     public void onServerChat(ServerChatEvent event) {
         if (AdminLoggerConfig.LOG_CHAT.get()) {
             String playerName = event.getPlayer().getName().getString();
-            String message = getLocalizedMessage("said: ", "disse: ");
-            logEvent(playerName, message + event.getMessage(), "chat");
+            String content = event.getMessage().getString();
+            content = content.replaceAll("literal\\{|\\}", "");
+            String message = getLocalizedMessage("chat", playerName, content);
+            logEvent(playerName, message, "chat");
         }
     }
 
@@ -135,7 +162,8 @@ public class AdminLogger {
             String playerName = event.getParseResults().getContext().getSource()
                 .getEntity().getName().getString();
             String command = event.getParseResults().getReader().getString();
-            logEvent(playerName, "executed: " + command, "commands");
+            String message = getLocalizedMessage("command", playerName, command);
+            logEvent(playerName, message, "commands");
         }
     }
 
@@ -148,15 +176,9 @@ public class AdminLogger {
             
             if (event.getSource().getEntity() instanceof Player) {
                 Player killer = (Player) event.getSource().getEntity();
-                cause = getLocalizedMessage(
-                    "was killed by " + killer.getName().getString(),
-                    "foi morto por " + killer.getName().getString()
-                );
+                cause = getLocalizedMessage("death.by.player", playerName, killer.getName().getString());
             } else {
-                cause = getLocalizedMessage(
-                    "died by " + event.getSource().getMsgId(),
-                    "morreu por " + event.getSource().getMsgId()
-                );
+                cause = getLocalizedMessage("death.generic", playerName, event.getSource().getMsgId());
             }
             
             logEvent(playerName, cause, "actions");

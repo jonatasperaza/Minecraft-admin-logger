@@ -1,0 +1,8 @@
+{
+    "login": "[%s] entrou no servidor em %s",
+    "logout": "[%s] saiu do servidor",
+    "chat": "[%s] disse: %s",
+    "command": "[%s] executou: %s",
+    "death.by.player": "[%s] foi morto por %s",
+    "death.generic": "[%s] morreu por %s"
+}

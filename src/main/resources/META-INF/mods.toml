@@ -5,47 +5,30 @@ issueTrackerURL="https://github.com/jonatasperaza/Minecraft-admin-logger/issues"
 
 [[mods]]
 modId="adminlogger"
-version="1.3"
+version="1.4"
 displayName="Admin Logger"
+updateJSONURL="https://github.com/jonatasperaza/Minecraft-admin-logger/raw/main/update.json"
 displayURL="https://github.com/jonatasperaza/Minecraft-admin-logger"
 logoFile="logo.png"
-credits="Thanks to the Forge and Minecraft modding community"
+credits="Forge community | Contributors"
 authors="jonatasperaza"
 description='''
-A comprehensive administrative logging mod for Minecraft servers.
-
-Features:
-- Player login/logout tracking with coordinates
-- Chat message logging
-- Command execution logging
-- Player death logging with cause
-- Automatic log rotation
-- Multi-language support (English and Portuguese)
-
-All logs are organized by player and date in separate files for easy access and management.
+Logs administrativos para servidores Minecraft
+• Rastreamento de login/logout
+• Registro de chat/comandos
+• Suporte multilíngue
 '''
 
-# Versão em português
-[[mods.1]]
-modId="adminlogger"
-version="1.3"
-displayName="Admin Logger"
-logoFile="logo.png"
-credits="Agradecimentos à comunidade de modding do Forge e Minecraft"
-authors="jonatasperaza"
-description='''
-Um mod abrangente de registro administrativo para servidores Minecraft.
+[mods.adminlogger]
+catalogueMetadataVersion=2
+configuredBackground="minecraft:textures/block/stone.png"
 
-Funcionalidades:
-- Rastreamento de login/logout de jogadores com coordenadas
-- Registro de mensagens do chat
-- Registro de execução de comandos
-- Registro de mortes de jogadores com causa
-- Rotação automática de logs
-- Suporte a múltiplos idiomas (Inglês e Português)
+[mods.adminlogger.links]
+website="https://github.com/jonatasperaza/Minecraft-admin-logger"
+issues="https://github.com/jonatasperaza/Minecraft-admin-logger/issues"
 
-Todos os logs são organizados por jogador e data em arquivos separados para fácil acesso e gerenciamento.
-'''
+[mods.adminlogger.badges]
+library=true
 
 [[dependencies.adminlogger]]
 modId="forge"
@@ -53,14 +36,10 @@ mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
-    
+
 [[dependencies.adminlogger]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20,1.21)"
 ordering="NONE"
 side="BOTH"
-
-[modproperties.adminlogger]
-catalogueImageIcon="logo.png"
-configuredBackground="minecraft:textures/block/oak_planks.png"
