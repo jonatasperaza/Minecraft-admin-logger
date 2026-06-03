@@ -93,7 +93,21 @@ Mantenha `discordWebhookUrl` privado. Se essa URL vazar, qualquer pessoa pode en
 .\gradlew.bat clean build
 ```
 
-O arquivo final fica em `build/libs/adminlogger-2.3.0.jar`.
+O arquivo final fica em `build/libs/adminlogger-2.3.1.jar`.
+
+## Arquitetura
+
+O mod e organizado por responsabilidade:
+
+- `com.adminlogger`: ponto de entrada do mod e constantes.
+- `com.adminlogger.command`: comandos `/adminlogger`.
+- `com.adminlogger.event`: handlers de eventos NeoForge/Minecraft.
+- `com.adminlogger.logging`: escrita de logs, filtros e orquestracao de auditoria.
+- `com.adminlogger.alert`: alertas para ops e Discord webhook.
+- `com.adminlogger.container`: sessoes e diff de containers.
+- `com.adminlogger.i18n`: carregamento de idiomas.
+- `com.adminlogger.stats`: estatisticas de sessao.
+- `com.adminlogger.util`: formatacao Minecraft e helpers reutilizaveis.
 
 ## Atualizando para novas versoes
 
