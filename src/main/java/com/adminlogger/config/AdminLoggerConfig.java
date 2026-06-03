@@ -2,8 +2,6 @@ package com.adminlogger.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-import java.util.List;
-
 public class AdminLoggerConfig {
     public static final ModConfigSpec.ConfigValue<String> LANGUAGE;
     public static final ModConfigSpec.BooleanValue LOG_CHAT;
@@ -18,7 +16,7 @@ public class AdminLoggerConfig {
 
         LANGUAGE = BUILDER
                 .comment("Mod language (en_us or pt_br)")
-                .defineInList("language", "pt_br", List.of("en_us", "pt_br"));
+                .define("language", "pt_br", AdminLoggerConfig::isSupportedLanguage);
 
         LOG_CHAT = BUILDER
                 .comment("Enable chat logging")
@@ -38,5 +36,9 @@ public class AdminLoggerConfig {
 
     public static ModConfigSpec getSpec() {
         return SPEC;
+    }
+
+    private static boolean isSupportedLanguage(Object value) {
+        return value instanceof String language && ("en_us".equals(language) || "pt_br".equals(language));
     }
 }
