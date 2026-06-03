@@ -1,36 +1,43 @@
-#Configurações do Admin Logger
+# Admin Logger common configuration example
 
 [general]
 
-#Idioma do mod (en_us = English, pt_br = Português Brasil)
+# Mod language: en_us or pt_br
 language = "pt_br"
 
-#Habilitar registro de chat
+# Directory where logs are stored. Relative paths use the server/game directory.
+logDirectory = "logs/adminlogger"
+
+# Maximum size in MB for each log file before archiving.
+maxLogSizeMb = 5
+
+# Log format: text or jsonl.
+logFormat = "text"
+
+# Also write every event to logs/adminlogger/_global.
+logGlobalIndex = true
+
+# Use player UUIDs instead of player names for per-player folders.
+useUuidFolders = false
+
+# Include the player UUID in text log lines.
+includePlayerUuid = false
+
+# Enable event categories.
 logChat = true
-
-#Habilitar registro de comandos
 logCommands = true
-
-#Habilitar registro de inventário
-logInventory = false 
-
-#Habilitar registro de blocos quebrados/colocados
+logInventory = false
 logBlocks = true
-
-#Habilitar registro de containers
 logContainers = true
-
-#Habilitar registro de itens dropados/coletados
 logItems = true
-
-#Habilitar registro de mudancas de modo de jogo
 logGameMode = true
-
-#Habilitar registro de teleporte e troca de dimensao
 logTeleports = true
 
-#Mascarar argumentos sensiveis em comandos
-maskSensitiveCommands = true
+# Filters. Values are case-insensitive.
+ignoredPlayers = []
+ignoredWorlds = []
+ignoredCommands = ["login", "register", "l", "reg"]
 
-#Termos de argumentos sensiveis em comandos
+# Sensitive command masking.
+maskSensitiveCommands = true
 sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]

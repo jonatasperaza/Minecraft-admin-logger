@@ -17,5 +17,12 @@
     "teleport.command": "[%s] teleported from %s to %s via command",
     "teleport.ender_pearl": "[%s] teleported from %s to %s via ender pearl",
     "teleport.chorus": "[%s] teleported from %s to %s via chorus fruit",
-    "reload.success": "Admin Logger reloaded successfully."
+    "reload.success": "Admin Logger reloaded successfully.",
+    "status.header": "Admin Logger status:",
+    "status.version": "Version: %s",
+    "status.log_directory": "Log directory: %s",
+    "status.log_format": "Log format: %s",
+    "status.enabled_categories": "Enabled categories: %s",
+    "status.global_index": "Global index enabled: %s",
+    "status.filters": "Active filters: %s players, %s worlds, %s commands"
 }

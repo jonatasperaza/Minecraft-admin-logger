@@ -16,9 +16,13 @@ Admin Logger e um mod para administradores de servidores Minecraft que registra 
 - Log de itens dropados e coletados
 - Log de mudancas de gamemode
 - Log de teleportes por comando, ender pearl, chorus fruit e troca de dimensao
-- Comando `/adminlogger reload`
+- Filtros por jogador, mundo/dimensao e comandos ignorados
+- Logs em formato texto ou JSON Lines (`jsonl`)
+- Indice global em `logs/adminlogger/_global/` com todos os eventos do servidor
+- Diretorio, tamanho maximo de arquivo e pastas por UUID configuraveis
+- Comandos `/adminlogger reload` e `/adminlogger status`
 - Suporte a multiplos idiomas: ingles e portugues
-- Rotacao automatica de logs: 5 MB por arquivo
+- Rotacao automatica de logs por tamanho configuravel
 
 ## Requisitos
 
@@ -39,6 +43,12 @@ Edite o arquivo `adminlogger-common.toml`, gerado na primeira execucao:
 ```toml
 [general]
 language = "pt_br"
+logDirectory = "logs/adminlogger"
+maxLogSizeMb = 5
+logFormat = "text"
+logGlobalIndex = true
+useUuidFolders = false
+includePlayerUuid = false
 logChat = true
 logCommands = true
 logInventory = false
@@ -47,11 +57,18 @@ logContainers = true
 logItems = true
 logGameMode = true
 logTeleports = true
+ignoredPlayers = []
+ignoredWorlds = []
+ignoredCommands = ["login", "register", "l", "reg"]
 maskSensitiveCommands = true
 sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]
 ```
 
-Os logs sao salvos em `logs/adminlogger/<jogador>/`.
+Os logs por jogador sao salvos em `logs/adminlogger/<jogador>/` por padrao. Se `useUuidFolders = true`, os logs passam para `logs/adminlogger/<uuid>/`.
+
+Quando `logGlobalIndex = true`, todo evento tambem e escrito em `logs/adminlogger/_global/`, o que facilita auditoria rapida sem abrir pasta por pasta.
+
+Use `logFormat = "jsonl"` se quiser processar os logs por ferramenta externa, dashboard ou script.
 
 ## Build
 
@@ -59,7 +76,7 @@ Os logs sao salvos em `logs/adminlogger/<jogador>/`.
 .\gradlew.bat clean build
 ```
 
-O arquivo final fica em `build/libs/adminlogger-2.1.0.jar`.
+O arquivo final fica em `build/libs/adminlogger-2.2.0.jar`.
 
 ## Atualizando para novas versoes
 

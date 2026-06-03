@@ -17,5 +17,12 @@
     "teleport.command": "[%s] teleportou de %s para %s via comando",
     "teleport.ender_pearl": "[%s] teleportou de %s para %s via ender pearl",
     "teleport.chorus": "[%s] teleportou de %s para %s via chorus fruit",
-    "reload.success": "Admin Logger recarregado com sucesso."
+    "reload.success": "Admin Logger recarregado com sucesso.",
+    "status.header": "Status do Admin Logger:",
+    "status.version": "Versao: %s",
+    "status.log_directory": "Diretorio de logs: %s",
+    "status.log_format": "Formato de logs: %s",
+    "status.enabled_categories": "Categorias ativas: %s",
+    "status.global_index": "Indice global ativo: %s",
+    "status.filters": "Filtros ativos: %s jogadores, %s mundos, %s comandos"
 }

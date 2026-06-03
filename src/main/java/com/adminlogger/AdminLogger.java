@@ -1,6 +1,7 @@
 package com.adminlogger;
 
 import com.adminlogger.config.AdminLoggerConfig;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.Command;
@@ -65,11 +66,11 @@ import java.util.regex.Pattern;
 @Mod(AdminLogger.MOD_ID)
 public class AdminLogger {
     public static final String MOD_ID = "adminlogger";
+    private static final String MOD_VERSION = "2.2.0";
 
+    private static final Gson GSON = new Gson();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
-    private static final Path LOG_DIRECTORY = Path.of("logs", "adminlogger");
-    private static final int MAX_LOG_SIZE_MB = 5;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<String, String> LANGUAGE_MAP = new HashMap<>();
 
@@ -82,9 +83,8 @@ public class AdminLogger {
 
         modContainer.registerConfig(ModConfig.Type.COMMON, AdminLoggerConfig.getSpec());
         NeoForge.EVENT_BUS.register(this);
-        createLogDirectory();
 
-        LOGGER.info("Admin Logger v2.1.0 for Minecraft 1.21.1 NeoForge initialized!");
+        LOGGER.info("Admin Logger v{} for Minecraft 1.21.1 NeoForge initialized!", MOD_VERSION);
     }
 
     private void loadLanguage(String langCode) {
@@ -108,11 +108,13 @@ public class AdminLogger {
 
     private void onConfigLoad(final ModConfigEvent.Loading event) {
         loadLanguage(AdminLoggerConfig.LANGUAGE.get());
+        createLogDirectory();
         LOGGER.info("Admin Logger config loaded successfully!");
     }
 
     private void onConfigReload(final ModConfigEvent.Reloading event) {
         loadLanguage(AdminLoggerConfig.LANGUAGE.get());
+        createLogDirectory();
         LOGGER.info("Admin Logger config reloaded successfully!");
     }
 
@@ -128,49 +130,108 @@ public class AdminLogger {
 
     private void createLogDirectory() {
         try {
-            Files.createDirectories(LOG_DIRECTORY);
+            Files.createDirectories(logDirectory());
+            if (AdminLoggerConfig.LOG_GLOBAL_INDEX.get()) {
+                Files.createDirectories(logDirectory().resolve("_global"));
+            }
         } catch (IOException e) {
             LOGGER.error("Failed to create log directory", e);
         }
     }
 
-    private void createPlayerDirectory(String playerName) {
+    private void createPlayerDirectory(String playerName, UUID playerUuid) {
         try {
-            Files.createDirectories(LOG_DIRECTORY.resolve(playerName));
+            Files.createDirectories(playerDirectory(playerName, playerUuid));
         } catch (IOException e) {
             LOGGER.error("Failed to create player directory: {}", playerName, e);
         }
     }
 
-    private void logEvent(String playerName, String action, String type) {
+    private void logEvent(Player player, String action, String type) {
+        if (!shouldLogPlayer(player) || !shouldLogWorld(player.level())) {
+            return;
+        }
+
+        logEvent(playerName(player), player.getUUID(), action, type);
+    }
+
+    private void logEvent(String playerName, UUID playerUuid, String action, String type) {
         try {
-            createPlayerDirectory(playerName);
+            createPlayerDirectory(playerName, playerUuid);
             String date = DATE_FORMAT.format(new Date());
             String time = TIME_FORMAT.format(new Date());
-            Path logPath = LOG_DIRECTORY.resolve(playerName).resolve(date + "-" + type + ".log");
-            manageLogSize(logPath);
+            String fileName = date + "-" + type + logFileExtension();
+            String logLine = formatLogLine(date, time, playerName, playerUuid, action, type);
 
-            try (BufferedWriter writer = Files.newBufferedWriter(
-                    logPath,
-                    StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.APPEND
-            )) {
-                writer.write(String.format("[%s] %s%n", time, action));
+            writeLogLine(playerDirectory(playerName, playerUuid).resolve(fileName), logLine);
+
+            if (AdminLoggerConfig.LOG_GLOBAL_INDEX.get()) {
+                writeLogLine(logDirectory().resolve("_global").resolve(fileName), logLine);
             }
         } catch (IOException e) {
             LOGGER.error("Failed to log event", e);
         }
     }
 
+    private void writeLogLine(Path logPath, String logLine) throws IOException {
+        Files.createDirectories(logPath.getParent());
+        manageLogSize(logPath);
+
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                logPath,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND
+        )) {
+            writer.write(logLine);
+        }
+    }
+
+    private String formatLogLine(String date, String time, String playerName, UUID playerUuid, String action, String type) {
+        if (isJsonLogFormat()) {
+            JsonObject event = new JsonObject();
+            event.addProperty("date", date);
+            event.addProperty("time", time);
+            event.addProperty("type", type);
+            event.addProperty("player", playerName);
+            event.addProperty("uuid", playerUuid.toString());
+            event.addProperty("message", action);
+            return GSON.toJson(event) + System.lineSeparator();
+        }
+
+        String uuidPart = AdminLoggerConfig.INCLUDE_PLAYER_UUID.get() ? " [uuid:" + playerUuid + "]" : "";
+        return String.format("[%s] [%s]%s %s%n", time, type, uuidPart, action);
+    }
+
     private void manageLogSize(Path logPath) throws IOException {
-        if (Files.exists(logPath) && Files.size(logPath) > MAX_LOG_SIZE_MB * 1024L * 1024L) {
+        if (Files.exists(logPath) && Files.size(logPath) > AdminLoggerConfig.MAX_LOG_SIZE_MB.get() * 1024L * 1024L) {
             String archiveName = logPath.getFileName().toString().replace(
-                    ".log",
-                    "-archived-" + System.currentTimeMillis() + ".log"
+                    logFileExtension(),
+                    "-archived-" + System.currentTimeMillis() + logFileExtension()
             );
             Files.move(logPath, logPath.resolveSibling(archiveName), StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    private Path logDirectory() {
+        return Path.of(AdminLoggerConfig.LOG_DIRECTORY.get().trim());
+    }
+
+    private Path playerDirectory(String playerName, UUID playerUuid) {
+        String folderName = AdminLoggerConfig.USE_UUID_FOLDERS.get() ? playerUuid.toString() : safePathSegment(playerName);
+        return logDirectory().resolve(folderName);
+    }
+
+    private String safePathSegment(String value) {
+        return value.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private boolean isJsonLogFormat() {
+        return "jsonl".equalsIgnoreCase(AdminLoggerConfig.LOG_FORMAT.get());
+    }
+
+    private String logFileExtension() {
+        return isJsonLogFormat() ? ".jsonl" : ".log";
     }
 
     private String playerName(Player player) {
@@ -216,6 +277,38 @@ public class AdminLogger {
         return !(level instanceof Level realLevel) || !realLevel.isClientSide;
     }
 
+    private boolean shouldLogPlayer(Player player) {
+        return !containsIgnoreCase(AdminLoggerConfig.IGNORED_PLAYERS.get(), playerName(player))
+                && !containsIgnoreCase(AdminLoggerConfig.IGNORED_PLAYERS.get(), player.getUUID().toString());
+    }
+
+    private boolean shouldLogWorld(LevelAccessor level) {
+        return !containsIgnoreCase(AdminLoggerConfig.IGNORED_WORLDS.get(), worldName(level));
+    }
+
+    private boolean shouldLogCommand(String command) {
+        String normalized = command.strip();
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1).strip();
+        }
+
+        if (normalized.isEmpty()) {
+            return false;
+        }
+
+        String commandRoot = normalized.split("\\s+", 2)[0];
+        return !containsIgnoreCase(AdminLoggerConfig.IGNORED_COMMANDS.get(), commandRoot);
+    }
+
+    private boolean containsIgnoreCase(List<? extends String> values, String candidate) {
+        for (String value : values) {
+            if (value != null && value.trim().equalsIgnoreCase(candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private boolean isOpenContainer(BlockEntity blockEntity) {
         return blockEntity instanceof Container;
     }
@@ -255,7 +348,7 @@ public class AdminLogger {
             int afterCount = afterItem == null ? 0 : afterItem.count();
             if (beforeItem.count() > afterCount) {
                 String amount = (beforeItem.count() - afterCount) + "x " + beforeItem.displayName();
-                logEvent(playerName, getLocalizedMessage("container.remove", playerName, amount, session.containerName(), session.location()), "containers");
+                logEvent(player, getLocalizedMessage("container.remove", playerName, amount, session.containerName(), session.location()), "containers");
             }
         }
 
@@ -265,7 +358,7 @@ public class AdminLogger {
             int beforeCount = beforeItem == null ? 0 : beforeItem.count();
             if (afterItem.count() > beforeCount) {
                 String amount = (afterItem.count() - beforeCount) + "x " + afterItem.displayName();
-                logEvent(playerName, getLocalizedMessage("container.add", playerName, amount, session.containerName(), session.location()), "containers");
+                logEvent(player, getLocalizedMessage("container.add", playerName, amount, session.containerName(), session.location()), "containers");
             }
         }
     }
@@ -294,12 +387,63 @@ public class AdminLogger {
         return Command.SINGLE_SUCCESS;
     }
 
+    private int statusCommand(CommandSourceStack source) {
+        sendStatusLine(source, "status.header");
+        sendStatusLine(source, "status.version", MOD_VERSION);
+        sendStatusLine(source, "status.log_directory", logDirectory().toAbsolutePath().normalize());
+        sendStatusLine(source, "status.log_format", AdminLoggerConfig.LOG_FORMAT.get().toLowerCase(Locale.ROOT));
+        sendStatusLine(source, "status.enabled_categories", enabledCategories());
+        sendStatusLine(source, "status.global_index", AdminLoggerConfig.LOG_GLOBAL_INDEX.get());
+        sendStatusLine(
+                source,
+                "status.filters",
+                AdminLoggerConfig.IGNORED_PLAYERS.get().size(),
+                AdminLoggerConfig.IGNORED_WORLDS.get().size(),
+                AdminLoggerConfig.IGNORED_COMMANDS.get().size()
+        );
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private void sendStatusLine(CommandSourceStack source, String key, Object... args) {
+        source.sendSuccess(() -> Component.literal(getLocalizedMessage(key, args)), false);
+    }
+
+    private String enabledCategories() {
+        List<String> categories = new ArrayList<>();
+        if (AdminLoggerConfig.LOG_CHAT.get()) {
+            categories.add("chat");
+        }
+        if (AdminLoggerConfig.LOG_COMMANDS.get()) {
+            categories.add("commands");
+        }
+        if (AdminLoggerConfig.LOG_INVENTORY.get()) {
+            categories.add("inventory");
+        }
+        if (AdminLoggerConfig.LOG_BLOCKS.get()) {
+            categories.add("blocks");
+        }
+        if (AdminLoggerConfig.LOG_CONTAINERS.get()) {
+            categories.add("containers");
+        }
+        if (AdminLoggerConfig.LOG_ITEMS.get()) {
+            categories.add("items");
+        }
+        if (AdminLoggerConfig.LOG_GAME_MODE.get()) {
+            categories.add("gamemode");
+        }
+        if (AdminLoggerConfig.LOG_TELEPORTS.get()) {
+            categories.add("teleports");
+        }
+        return categories.isEmpty() ? "none" : String.join(", ", categories);
+    }
+
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
                 Commands.literal("adminlogger")
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("reload").executes(context -> reloadCommand(context.getSource())))
+                        .then(Commands.literal("status").executes(context -> statusCommand(context.getSource())))
         );
     }
 
@@ -309,7 +453,7 @@ public class AdminLogger {
         String playerName = playerName(player);
         String coords = position(player.level(), player.getX(), player.getY(), player.getZ());
         String message = getLocalizedMessage("login", playerName, coords);
-        logEvent(playerName, message, "actions");
+        logEvent(player, message, "actions");
     }
 
     @SubscribeEvent
@@ -319,7 +463,7 @@ public class AdminLogger {
         pendingContainerPositions.remove(player.getUUID());
         containerSessions.remove(player.getUUID());
         String message = getLocalizedMessage("logout", playerName);
-        logEvent(playerName, message, "actions");
+        logEvent(player, message, "actions");
     }
 
     @SubscribeEvent
@@ -327,7 +471,7 @@ public class AdminLogger {
         if (AdminLoggerConfig.LOG_CHAT.get()) {
             String playerName = playerName(event.getPlayer());
             String message = getLocalizedMessage("chat", playerName, event.getRawText());
-            logEvent(playerName, message, "chat");
+            logEvent(event.getPlayer(), message, "chat");
         }
     }
 
@@ -336,9 +480,14 @@ public class AdminLogger {
         var sourceEntity = event.getParseResults().getContext().getSource().getEntity();
         if (AdminLoggerConfig.LOG_COMMANDS.get() && sourceEntity instanceof Player player) {
             String playerName = playerName(player);
-            String command = maskSensitiveCommand(event.getParseResults().getReader().getString());
+            String command = event.getParseResults().getReader().getString();
+            if (!shouldLogCommand(command)) {
+                return;
+            }
+
+            command = maskSensitiveCommand(command);
             String message = getLocalizedMessage("command", playerName, command);
-            logEvent(playerName, message, "commands");
+            logEvent(player, message, "commands");
         }
     }
 
@@ -354,7 +503,7 @@ public class AdminLogger {
                 cause = getLocalizedMessage("death.generic", playerName, event.getSource().getMsgId());
             }
 
-            logEvent(playerName, cause, "actions");
+            logEvent(player, cause, "actions");
         }
     }
 
@@ -367,7 +516,7 @@ public class AdminLogger {
         Player player = event.getPlayer();
         String playerName = playerName(player);
         String message = getLocalizedMessage("block.break", playerName, blockName(event.getState()), blockPosition(event.getLevel(), event.getPos()));
-        logEvent(playerName, message, "blocks");
+        logEvent(player, message, "blocks");
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -379,7 +528,7 @@ public class AdminLogger {
         if (event.getEntity() instanceof Player player) {
             String playerName = playerName(player);
             String message = getLocalizedMessage("block.place", playerName, blockName(event.getPlacedBlock()), blockPosition(event.getLevel(), event.getPos()));
-            logEvent(playerName, message, "blocks");
+            logEvent(player, message, "blocks");
         }
     }
 
@@ -417,7 +566,7 @@ public class AdminLogger {
         String containerName = blockName(state);
         String location = blockPosition(player.level(), pos);
         containerSessions.put(player.getUUID(), new ContainerSession(pos, containerName, location, snapshot(container)));
-        logEvent(playerName, getLocalizedMessage("container.open", playerName, containerName, location), "containers");
+        logEvent(player, getLocalizedMessage("container.open", playerName, containerName, location), "containers");
     }
 
     @SubscribeEvent
@@ -448,7 +597,7 @@ public class AdminLogger {
         ItemEntity itemEntity = event.getEntity();
         String playerName = playerName(player);
         String message = getLocalizedMessage("item.drop", playerName, itemName(itemEntity.getItem()), entityPosition(itemEntity));
-        logEvent(playerName, message, "items");
+        logEvent(player, message, "items");
     }
 
     @SubscribeEvent
@@ -467,7 +616,7 @@ public class AdminLogger {
         Player player = event.getPlayer();
         String playerName = playerName(player);
         String message = getLocalizedMessage("item.pickup", playerName, itemName(original, pickedUp), entityPosition(event.getItemEntity()));
-        logEvent(playerName, message, "items");
+        logEvent(player, message, "items");
     }
 
     @SubscribeEvent
@@ -479,7 +628,7 @@ public class AdminLogger {
         Player player = event.getEntity();
         String playerName = playerName(player);
         String message = getLocalizedMessage("gamemode.change", playerName, event.getCurrentGameMode().getName(), event.getNewGameMode().getName());
-        logEvent(playerName, message, "actions");
+        logEvent(player, message, "actions");
     }
 
     @SubscribeEvent
@@ -491,7 +640,7 @@ public class AdminLogger {
         Player player = event.getEntity();
         String playerName = playerName(player);
         String message = getLocalizedMessage("dimension.change", playerName, dimensionName(event.getFrom()), dimensionName(event.getTo()), entityPosition(player));
-        logEvent(playerName, message, "actions");
+        logEvent(player, message, "actions");
     }
 
     @SubscribeEvent
@@ -503,7 +652,7 @@ public class AdminLogger {
         String playerName = playerName(player);
         String from = entityPosition(player);
         String to = position(player.level(), event.getTargetX(), event.getTargetY(), event.getTargetZ());
-        logEvent(playerName, getLocalizedMessage("teleport.command", playerName, from, to), "actions");
+        logEvent(player, getLocalizedMessage("teleport.command", playerName, from, to), "actions");
     }
 
     @SubscribeEvent
@@ -516,7 +665,7 @@ public class AdminLogger {
         String playerName = playerName(player);
         String from = entityPosition(player);
         String to = position(player.level(), event.getTargetX(), event.getTargetY(), event.getTargetZ());
-        logEvent(playerName, getLocalizedMessage("teleport.ender_pearl", playerName, from, to), "actions");
+        logEvent(player, getLocalizedMessage("teleport.ender_pearl", playerName, from, to), "actions");
     }
 
     @SubscribeEvent
@@ -528,7 +677,7 @@ public class AdminLogger {
         String playerName = playerName(player);
         String from = entityPosition(player);
         String to = position(player.level(), event.getTargetX(), event.getTargetY(), event.getTargetZ());
-        logEvent(playerName, getLocalizedMessage("teleport.chorus", playerName, from, to), "actions");
+        logEvent(player, getLocalizedMessage("teleport.chorus", playerName, from, to), "actions");
     }
 
     private record ContainerSession(BlockPos pos, String containerName, String location, Map<String, ItemSnapshot> items) {

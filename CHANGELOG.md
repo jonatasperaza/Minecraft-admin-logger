@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.2.0-1.21.1 - Medium Operations Upgrade
+
+### Adicionado
+
+- Filtros por jogador/UUID com `ignoredPlayers`.
+- Filtros por dimensao com `ignoredWorlds`.
+- Filtros de comandos ignorados com `ignoredCommands`, com defaults para comandos comuns de autenticacao.
+- Opcao `logDirectory` para escolher onde os logs serao salvos.
+- Opcao `maxLogSizeMb` para configurar a rotacao de arquivos.
+- Opcao `logFormat` com suporte a `text` e `jsonl`.
+- Opcao `logGlobalIndex` para gravar todos os eventos tambem em `_global`.
+- Opcao `useUuidFolders` para usar UUIDs como pastas por jogador.
+- Opcao `includePlayerUuid` para incluir UUID em logs de texto.
+- Comando `/adminlogger status` para visualizar versao, diretorio, formato, categorias ativas e filtros.
+
+### Melhorado
+
+- Linhas de log em texto agora incluem a categoria do evento.
+- Escrita de logs foi centralizada para aplicar filtros e formato de maneira consistente.
+- Arquivo de configuracao de exemplo foi limpo e atualizado.
+- README atualizado com as novas opcoes operacionais.
+
+### Compatibilidade
+
+- Minecraft 1.21.1.
+- NeoForge 21.1.233 ou superior.
+- Java 21.
+
 ## 2.1.0-1.21.1 - High Priority Audit Expansion
 
 ### Adicionado
