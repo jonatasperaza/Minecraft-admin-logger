@@ -1,67 +1,74 @@
 package com.adminlogger;
 
+import com.adminlogger.config.AdminLoggerConfig;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.CommandEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.io.*;
-import java.nio.file.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.nio.charset.StandardCharsets;
-
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import com.adminlogger.config.AdminLoggerConfig;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.CommandEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import org.slf4j.Logger;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.MissingFormatArgumentException;
 
 @Mod(AdminLogger.MOD_ID)
 public class AdminLogger {
     public static final String MOD_ID = "adminlogger";
+
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
-    private static final String LOG_DIRECTORY = "logs/adminlogger/";
+    private static final Path LOG_DIRECTORY = Path.of("logs", "adminlogger");
     private static final int MAX_LOG_SIZE_MB = 5;
-    private static final Logger LOGGER = LogManager.getLogger(MOD_ID);
-    private static Map<String, String> languageMap = new HashMap<>();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Map<String, String> LANGUAGE_MAP = new HashMap<>();
 
-    public AdminLogger() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public AdminLogger(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::onConfigLoad);
-        
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AdminLoggerConfig.getSpec());
-        MinecraftForge.EVENT_BUS.register(this);
+        modEventBus.addListener(this::onConfigReload);
+
+        modContainer.registerConfig(ModConfig.Type.COMMON, AdminLoggerConfig.getSpec());
+        NeoForge.EVENT_BUS.register(this);
         createLogDirectory();
-        
-        LOGGER.info("Admin Logger v1.4 for Minecraft 1.20.1 initialized!");
+
+        LOGGER.info("Admin Logger v2.0.0 for Minecraft 1.21.1 NeoForge initialized!");
     }
 
     private void loadLanguage(String langCode) {
         String langFile = "assets/adminlogger/lang/" + langCode + ".json";
         try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(langFile)) {
-            languageMap.clear();
+            LANGUAGE_MAP.clear();
             if (inputStream != null) {
                 String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
                 JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
-                jsonObject.entrySet().forEach(entry -> 
-                    languageMap.put(entry.getKey(), entry.getValue().getAsString())
+                jsonObject.entrySet().forEach(entry ->
+                        LANGUAGE_MAP.put(entry.getKey(), entry.getValue().getAsString())
                 );
             } else {
                 LOGGER.warn("Language file {} not found! Loading English...", langFile);
                 loadLanguage("en_us");
             }
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             LOGGER.error("Failed to load language file: {}", langFile, e);
         }
     }
@@ -71,8 +78,13 @@ public class AdminLogger {
         LOGGER.info("Admin Logger config loaded successfully!");
     }
 
+    private void onConfigReload(final ModConfigEvent.Reloading event) {
+        loadLanguage(AdminLoggerConfig.LANGUAGE.get());
+        LOGGER.info("Admin Logger config reloaded successfully!");
+    }
+
     private String getLocalizedMessage(String key, Object... args) {
-        String message = languageMap.getOrDefault(key, key);
+        String message = LANGUAGE_MAP.getOrDefault(key, key);
         try {
             return String.format(message, args);
         } catch (MissingFormatArgumentException e) {
@@ -83,7 +95,7 @@ public class AdminLogger {
 
     private void createLogDirectory() {
         try {
-            Files.createDirectories(Paths.get(LOG_DIRECTORY));
+            Files.createDirectories(LOG_DIRECTORY);
         } catch (IOException e) {
             LOGGER.error("Failed to create log directory", e);
         }
@@ -91,9 +103,9 @@ public class AdminLogger {
 
     private void createPlayerDirectory(String playerName) {
         try {
-            Files.createDirectories(Paths.get(LOG_DIRECTORY, playerName));
+            Files.createDirectories(LOG_DIRECTORY.resolve(playerName));
         } catch (IOException e) {
-            LOGGER.error("Failed to create player directory: " + playerName, e);
+            LOGGER.error("Failed to create player directory: {}", playerName, e);
         }
     }
 
@@ -102,65 +114,63 @@ public class AdminLogger {
             createPlayerDirectory(playerName);
             String date = DATE_FORMAT.format(new Date());
             String time = TIME_FORMAT.format(new Date());
-            Path logPath = Paths.get(LOG_DIRECTORY, playerName, date + "-" + type + ".log");
+            Path logPath = LOG_DIRECTORY.resolve(playerName).resolve(date + "-" + type + ".log");
             manageLogSize(logPath);
 
-            try (BufferedWriter writer = Files.newBufferedWriter(logPath, 
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    logPath,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            )) {
                 writer.write(String.format("[%s] %s%n", time, action));
             }
         } catch (IOException e) {
-            LOGGER.error("Failed to log event: ", e);
+            LOGGER.error("Failed to log event", e);
         }
     }
 
     private void manageLogSize(Path logPath) throws IOException {
-        if (Files.exists(logPath) && Files.size(logPath) > MAX_LOG_SIZE_MB * 1024 * 1024) {
-            Path archivePath = Paths.get(logPath.toString().replace(".log", 
-                    "-archived-" + System.currentTimeMillis() + ".log"));
-            Files.move(logPath, archivePath, StandardCopyOption.REPLACE_EXISTING);
+        if (Files.exists(logPath) && Files.size(logPath) > MAX_LOG_SIZE_MB * 1024L * 1024L) {
+            String archiveName = logPath.getFileName().toString().replace(
+                    ".log",
+                    "-archived-" + System.currentTimeMillis() + ".log"
+            );
+            Files.move(logPath, logPath.resolveSibling(archiveName), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            String playerName = player.getName().getString();
-            String coords = String.format("(x:%.2f, y:%.2f, z:%.2f)", 
-                player.getX(), player.getY(), player.getZ());
-            String message = getLocalizedMessage("login", playerName, coords);
-            logEvent(playerName, message, "actions");
-        }
+        Player player = event.getEntity();
+        String playerName = player.getName().getString();
+        String coords = String.format("(x:%.2f, y:%.2f, z:%.2f)", player.getX(), player.getY(), player.getZ());
+        String message = getLocalizedMessage("login", playerName, coords);
+        logEvent(playerName, message, "actions");
     }
 
     @SubscribeEvent
     public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
-            String playerName = player.getName().getString();
-            String message = getLocalizedMessage("logout", playerName);
-            logEvent(playerName, message, "actions");
-        }
+        Player player = event.getEntity();
+        String playerName = player.getName().getString();
+        String message = getLocalizedMessage("logout", playerName);
+        logEvent(playerName, message, "actions");
     }
 
     @SubscribeEvent
     public void onServerChat(ServerChatEvent event) {
         if (AdminLoggerConfig.LOG_CHAT.get()) {
             String playerName = event.getPlayer().getName().getString();
-            String content = event.getMessage().getString();
-            content = content.replaceAll("literal\\{|\\}", "");
-            String message = getLocalizedMessage("chat", playerName, content);
+            String message = getLocalizedMessage("chat", playerName, event.getRawText());
             logEvent(playerName, message, "chat");
         }
     }
 
     @SubscribeEvent
     public void onCommand(CommandEvent event) {
-        if (AdminLoggerConfig.LOG_COMMANDS.get() && 
-            event.getParseResults().getContext().getSource().getEntity() instanceof Player) {
-            String playerName = event.getParseResults().getContext().getSource()
-                .getEntity().getName().getString();
+        var sourceEntity = event.getParseResults().getContext().getSource().getEntity();
+        if (AdminLoggerConfig.LOG_COMMANDS.get() && sourceEntity instanceof Player player) {
+            String playerName = player.getName().getString();
             String command = event.getParseResults().getReader().getString();
             String message = getLocalizedMessage("command", playerName, command);
             logEvent(playerName, message, "commands");
@@ -169,18 +179,16 @@ public class AdminLogger {
 
     @SubscribeEvent
     public void onPlayerDeath(LivingDeathEvent event) {
-        if (event.getEntity() instanceof Player) {
-            Player player = (Player) event.getEntity();
+        if (event.getEntity() instanceof Player player) {
             String playerName = player.getName().getString();
             String cause;
-            
-            if (event.getSource().getEntity() instanceof Player) {
-                Player killer = (Player) event.getSource().getEntity();
+
+            if (event.getSource().getEntity() instanceof Player killer) {
                 cause = getLocalizedMessage("death.by.player", playerName, killer.getName().getString());
             } else {
                 cause = getLocalizedMessage("death.generic", playerName, event.getSource().getMsgId());
             }
-            
+
             logEvent(playerName, cause, "actions");
         }
     }

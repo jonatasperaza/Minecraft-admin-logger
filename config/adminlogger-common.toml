@@ -1,5 +1,7 @@
 #Configurações do Admin Logger
 
+[general]
+
 #Idioma do mod (en_us = English, pt_br = Português Brasil)
 language = "pt_br"
 
