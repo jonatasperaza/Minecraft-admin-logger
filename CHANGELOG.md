@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.3.1-1.21.1 - Architecture Cleanup
+
+### Melhorado
+
+- Refatoracao do `AdminLogger` monolitico para pacotes por responsabilidade.
+- Entrada principal reduzida para registrar config, comandos, eventos e servicos.
+- Comandos movidos para `command/AdminLoggerCommands`.
+- Eventos movidos para handlers por dominio em `event`: jogadores/comandos, blocos, containers, itens e teleportes.
+- Escrita de logs e filtros movidos para `logging/AuditLogService`.
+- Alertas movidos para `alert/AlertService`.
+- Rastreamento de containers movido para `container/ContainerTracker`.
+- Idiomas, estatisticas e helpers extraidos para servicos dedicados.
+- README atualizado com a nova arquitetura do projeto.
+
+### Observacoes
+
+- Esta versao nao adiciona novas configuracoes; o objetivo e deixar a base pronta para manutencao e proximas features.
+
+### Compatibilidade
+
+- Minecraft 1.21.1.
+- NeoForge 21.1.233 ou superior.
+- Java 21.
+
 ## 2.3.0-1.21.1 - Large Active Monitoring Upgrade
 
 ### Adicionado
