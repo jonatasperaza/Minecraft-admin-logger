@@ -3,16 +3,22 @@
 ![Minecraft 1.21.1](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen)
 ![NeoForge](https://img.shields.io/badge/Loader-NeoForge-orange)
 
-Um mod para administradores de servidores Minecraft que registra ações de jogadores em arquivos de log.
+Admin Logger e um mod para administradores de servidores Minecraft que registra acoes importantes de jogadores em arquivos de log.
 
 ## Funcionalidades
 
 - Logs de login/logout com coordenadas
-- Registro de comandos executados
+- Registro de comandos executados com mascara para argumentos sensiveis
 - Log de mensagens do chat
 - Log de mortes
-- Suporte a múltiplos idiomas: inglês e português
-- Rotação automática de logs: 5 MB por arquivo
+- Log de blocos quebrados e colocados
+- Log de containers abertos e diferencas de itens ao fechar
+- Log de itens dropados e coletados
+- Log de mudancas de gamemode
+- Log de teleportes por comando, ender pearl, chorus fruit e troca de dimensao
+- Comando `/adminlogger reload`
+- Suporte a multiplos idiomas: ingles e portugues
+- Rotacao automatica de logs: 5 MB por arquivo
 
 ## Requisitos
 
@@ -20,15 +26,15 @@ Um mod para administradores de servidores Minecraft que registra ações de joga
 - NeoForge 21.1.233 ou superior
 - Java 21
 
-## Instalação
+## Instalacao
 
 1. Baixe o `.jar` mais recente na aba [Releases](https://github.com/jonatasperaza/Minecraft-admin-logger/releases).
 2. Coloque o arquivo na pasta `mods` do seu servidor NeoForge.
 3. Reinicie o servidor.
 
-## Configuração
+## Configuracao
 
-Edite o arquivo `adminlogger-common.toml`, gerado na primeira execução:
+Edite o arquivo `adminlogger-common.toml`, gerado na primeira execucao:
 
 ```toml
 [general]
@@ -36,23 +42,32 @@ language = "pt_br"
 logChat = true
 logCommands = true
 logInventory = false
+logBlocks = true
+logContainers = true
+logItems = true
+logGameMode = true
+logTeleports = true
+maskSensitiveCommands = true
+sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]
 ```
 
-Os logs são salvos em `logs/adminlogger/<jogador>/`.
+Os logs sao salvos em `logs/adminlogger/<jogador>/`.
 
 ## Build
 
 ```powershell
-.\gradlew.bat build
+.\gradlew.bat clean build
 ```
 
-## Atualizando para novas versões
+O arquivo final fica em `build/libs/adminlogger-2.1.0.jar`.
 
-As versões principais ficam centralizadas em `gradle.properties`:
+## Atualizando para novas versoes
+
+As versoes principais ficam centralizadas em `gradle.properties`:
 
 - `minecraft_version`
 - `minecraft_version_range`
 - `neo_version`
 - `loader_version_range`
 
-Para portar para uma versão mais nova, atualize esses valores usando uma versão NeoForge compatível, rode `.\gradlew.bat build` e revise principalmente os eventos usados em `AdminLogger`: login/logout, chat, comandos e morte. Mantenha o `minecraft_version_range` fechado até testar em servidor, para evitar o mod carregar em uma versão ainda não validada.
+Para portar para uma versao mais nova, atualize esses valores usando uma versao NeoForge compativel, rode `.\gradlew.bat build` e revise principalmente os eventos usados em `AdminLogger`.

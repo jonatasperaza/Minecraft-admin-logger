@@ -4,5 +4,18 @@
     "chat": "[%s] said: %s",
     "command": "[%s] executed: %s",
     "death.by.player": "[%s] was killed by %s",
-    "death.generic": "[%s] died by %s"
+    "death.generic": "[%s] died by %s",
+    "block.break": "[%s] broke %s at %s",
+    "block.place": "[%s] placed %s at %s",
+    "container.open": "[%s] opened %s at %s",
+    "container.add": "[%s] added %s to %s at %s",
+    "container.remove": "[%s] removed %s from %s at %s",
+    "item.drop": "[%s] dropped %s at %s",
+    "item.pickup": "[%s] picked up %s at %s",
+    "gamemode.change": "[%s] changed game mode from %s to %s",
+    "dimension.change": "[%s] changed dimension from %s to %s at %s",
+    "teleport.command": "[%s] teleported from %s to %s via command",
+    "teleport.ender_pearl": "[%s] teleported from %s to %s via ender pearl",
+    "teleport.chorus": "[%s] teleported from %s to %s via chorus fruit",
+    "reload.success": "Admin Logger reloaded successfully."
 }

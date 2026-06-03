@@ -13,3 +13,24 @@ logCommands = true
 
 #Habilitar registro de inventário
 logInventory = false 
+
+#Habilitar registro de blocos quebrados/colocados
+logBlocks = true
+
+#Habilitar registro de containers
+logContainers = true
+
+#Habilitar registro de itens dropados/coletados
+logItems = true
+
+#Habilitar registro de mudancas de modo de jogo
+logGameMode = true
+
+#Habilitar registro de teleporte e troca de dimensao
+logTeleports = true
+
+#Mascarar argumentos sensiveis em comandos
+maskSensitiveCommands = true
+
+#Termos de argumentos sensiveis em comandos
+sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]
