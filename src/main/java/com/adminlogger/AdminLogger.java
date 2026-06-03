@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -47,12 +48,17 @@ import org.slf4j.Logger;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -66,9 +72,12 @@ import java.util.regex.Pattern;
 @Mod(AdminLogger.MOD_ID)
 public class AdminLogger {
     public static final String MOD_ID = "adminlogger";
-    private static final String MOD_VERSION = "2.2.0";
+    private static final String MOD_VERSION = "2.3.0";
 
     private static final Gson GSON = new Gson();
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -76,6 +85,9 @@ public class AdminLogger {
 
     private final Map<UUID, BlockPos> pendingContainerPositions = new HashMap<>();
     private final Map<UUID, ContainerSession> containerSessions = new HashMap<>();
+    private final Map<String, Integer> eventCounters = new HashMap<>();
+    private final Map<String, Integer> playerCounters = new HashMap<>();
+    private int totalEvents;
 
     public AdminLogger(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::onConfigLoad);
@@ -148,14 +160,20 @@ public class AdminLogger {
     }
 
     private void logEvent(Player player, String action, String type) {
+        logEvent(player, action, type, null);
+    }
+
+    private void logEvent(Player player, String action, String type, String alertKey) {
         if (!shouldLogPlayer(player) || !shouldLogWorld(player.level())) {
             return;
         }
 
-        logEvent(playerName(player), player.getUUID(), action, type);
+        String playerName = playerName(player);
+        writeEvent(playerName, player.getUUID(), action, type);
+        dispatchAlert(player, action, type, alertKey);
     }
 
-    private void logEvent(String playerName, UUID playerUuid, String action, String type) {
+    private void writeEvent(String playerName, UUID playerUuid, String action, String type) {
         try {
             createPlayerDirectory(playerName, playerUuid);
             String date = DATE_FORMAT.format(new Date());
@@ -168,6 +186,8 @@ public class AdminLogger {
             if (AdminLoggerConfig.LOG_GLOBAL_INDEX.get()) {
                 writeLogLine(logDirectory().resolve("_global").resolve(fileName), logLine);
             }
+
+            recordStats(playerName, type);
         } catch (IOException e) {
             LOGGER.error("Failed to log event", e);
         }
@@ -234,6 +254,89 @@ public class AdminLogger {
         return isJsonLogFormat() ? ".jsonl" : ".log";
     }
 
+    private void recordStats(String playerName, String type) {
+        totalEvents++;
+        eventCounters.merge(type, 1, Integer::sum);
+        playerCounters.merge(playerName, 1, Integer::sum);
+    }
+
+    private void dispatchAlert(Player player, String action, String type, String alertKey) {
+        if (!AdminLoggerConfig.ENABLE_ALERTS.get() || !shouldAlert(player, type, alertKey)) {
+            return;
+        }
+
+        String playerName = playerName(player);
+        String alertMessage = getLocalizedMessage("alert.message", playerName, type, action);
+
+        if (AdminLoggerConfig.WRITE_ALERT_LOG.get()) {
+            writeEvent(playerName, player.getUUID(), alertMessage, "alerts");
+        }
+
+        if (AdminLoggerConfig.BROADCAST_ALERTS_TO_OPS.get()) {
+            broadcastAlertToOps(player, alertMessage);
+        }
+
+        if (AdminLoggerConfig.DISCORD_WEBHOOK_ENABLED.get()) {
+            sendDiscordAlert(alertMessage);
+        }
+    }
+
+    private boolean shouldAlert(Player player, String type, String alertKey) {
+        return containsIgnoreCase(AdminLoggerConfig.ALERT_EVENT_TYPES.get(), type)
+                || containsIgnoreCase(AdminLoggerConfig.WATCHED_PLAYERS.get(), playerName(player))
+                || containsIgnoreCase(AdminLoggerConfig.WATCHED_PLAYERS.get(), player.getUUID().toString())
+                || (alertKey != null && containsIgnoreCase(AdminLoggerConfig.WATCHED_COMMANDS.get(), alertKey));
+    }
+
+    private void broadcastAlertToOps(Player player, String alertMessage) {
+        var server = player.getServer();
+        if (server == null) {
+            return;
+        }
+
+        for (ServerPlayer onlinePlayer : server.getPlayerList().getPlayers()) {
+            if (server.getPlayerList().isOp(onlinePlayer.getGameProfile())) {
+                onlinePlayer.sendSystemMessage(Component.literal(alertMessage));
+            }
+        }
+    }
+
+    private void sendDiscordAlert(String alertMessage) {
+        String webhookUrl = AdminLoggerConfig.DISCORD_WEBHOOK_URL.get().trim();
+        if (webhookUrl.isEmpty()) {
+            return;
+        }
+
+        URI webhookUri;
+        try {
+            webhookUri = URI.create(webhookUrl);
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Invalid Discord webhook URL configured for Admin Logger.");
+            return;
+        }
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty("username", AdminLoggerConfig.DISCORD_WEBHOOK_USERNAME.get());
+        payload.addProperty("content", alertMessage);
+
+        HttpRequest request = HttpRequest.newBuilder(webhookUri)
+                .timeout(Duration.ofSeconds(10))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(payload), StandardCharsets.UTF_8))
+                .build();
+
+        HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.discarding())
+                .thenAccept(response -> {
+                    if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                        LOGGER.warn("Discord webhook alert failed with HTTP status {}", response.statusCode());
+                    }
+                })
+                .exceptionally(error -> {
+                    LOGGER.warn("Failed to send Discord webhook alert.", error);
+                    return null;
+                });
+    }
+
     private String playerName(Player player) {
         return player.getName().getString();
     }
@@ -287,17 +390,16 @@ public class AdminLogger {
     }
 
     private boolean shouldLogCommand(String command) {
+        String commandRoot = commandRoot(command);
+        return !commandRoot.isEmpty() && !containsIgnoreCase(AdminLoggerConfig.IGNORED_COMMANDS.get(), commandRoot);
+    }
+
+    private String commandRoot(String command) {
         String normalized = command.strip();
         if (normalized.startsWith("/")) {
             normalized = normalized.substring(1).strip();
         }
-
-        if (normalized.isEmpty()) {
-            return false;
-        }
-
-        String commandRoot = normalized.split("\\s+", 2)[0];
-        return !containsIgnoreCase(AdminLoggerConfig.IGNORED_COMMANDS.get(), commandRoot);
+        return normalized.isEmpty() ? "" : normalized.split("\\s+", 2)[0];
     }
 
     private boolean containsIgnoreCase(List<? extends String> values, String candidate) {
@@ -394,6 +496,7 @@ public class AdminLogger {
         sendStatusLine(source, "status.log_format", AdminLoggerConfig.LOG_FORMAT.get().toLowerCase(Locale.ROOT));
         sendStatusLine(source, "status.enabled_categories", enabledCategories());
         sendStatusLine(source, "status.global_index", AdminLoggerConfig.LOG_GLOBAL_INDEX.get());
+        sendStatusLine(source, "status.alerts", AdminLoggerConfig.ENABLE_ALERTS.get(), AdminLoggerConfig.DISCORD_WEBHOOK_ENABLED.get());
         sendStatusLine(
                 source,
                 "status.filters",
@@ -401,6 +504,14 @@ public class AdminLogger {
                 AdminLoggerConfig.IGNORED_WORLDS.get().size(),
                 AdminLoggerConfig.IGNORED_COMMANDS.get().size()
         );
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int statsCommand(CommandSourceStack source) {
+        sendStatusLine(source, "stats.header");
+        sendStatusLine(source, "stats.total", totalEvents);
+        sendStatusLine(source, "stats.categories", formatCounters(eventCounters));
+        sendStatusLine(source, "stats.players", formatCounters(playerCounters));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -437,6 +548,25 @@ public class AdminLogger {
         return categories.isEmpty() ? "none" : String.join(", ", categories);
     }
 
+    private String formatCounters(Map<String, Integer> counters) {
+        if (counters.isEmpty()) {
+            return getLocalizedMessage("stats.none");
+        }
+
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(counters.entrySet());
+        entries.sort((left, right) -> {
+            int countCompare = right.getValue().compareTo(left.getValue());
+            return countCompare != 0 ? countCompare : left.getKey().compareTo(right.getKey());
+        });
+
+        List<String> values = new ArrayList<>();
+        for (int index = 0; index < Math.min(5, entries.size()); index++) {
+            Map.Entry<String, Integer> entry = entries.get(index);
+            values.add(entry.getKey() + "=" + entry.getValue());
+        }
+        return String.join(", ", values);
+    }
+
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(
@@ -444,6 +574,7 @@ public class AdminLogger {
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("reload").executes(context -> reloadCommand(context.getSource())))
                         .then(Commands.literal("status").executes(context -> statusCommand(context.getSource())))
+                        .then(Commands.literal("stats").executes(context -> statsCommand(context.getSource())))
         );
     }
 
@@ -480,14 +611,15 @@ public class AdminLogger {
         var sourceEntity = event.getParseResults().getContext().getSource().getEntity();
         if (AdminLoggerConfig.LOG_COMMANDS.get() && sourceEntity instanceof Player player) {
             String playerName = playerName(player);
-            String command = event.getParseResults().getReader().getString();
-            if (!shouldLogCommand(command)) {
+            String rawCommand = event.getParseResults().getReader().getString();
+            String alertKey = commandRoot(rawCommand);
+            if (!shouldLogCommand(rawCommand)) {
                 return;
             }
 
-            command = maskSensitiveCommand(command);
+            String command = maskSensitiveCommand(rawCommand);
             String message = getLocalizedMessage("command", playerName, command);
-            logEvent(player, message, "commands");
+            logEvent(player, message, "commands", alertKey);
         }
     }
 

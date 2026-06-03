@@ -38,6 +38,19 @@ ignoredPlayers = []
 ignoredWorlds = []
 ignoredCommands = ["login", "register", "l", "reg"]
 
+# Active alerts. Disabled by default.
+enableAlerts = false
+alertEventTypes = ["commands", "containers"]
+watchedPlayers = []
+watchedCommands = ["op", "deop", "ban", "pardon", "kick", "stop", "reload", "gamemode", "tp", "teleport"]
+broadcastAlertsToOps = true
+writeAlertLog = true
+
+# Optional Discord webhook alerts. Keep the URL private.
+discordWebhookEnabled = false
+discordWebhookUrl = ""
+discordWebhookUsername = "Admin Logger"
+
 # Sensitive command masking.
 maskSensitiveCommands = true
 sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]

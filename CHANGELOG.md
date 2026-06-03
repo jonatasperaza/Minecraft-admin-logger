@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.3.0-1.21.1 - Large Active Monitoring Upgrade
+
+### Adicionado
+
+- Sistema de alertas ativos configuravel com `enableAlerts`.
+- Alertas por categoria com `alertEventTypes`.
+- Watchlist de jogadores/UUIDs com `watchedPlayers`.
+- Watchlist de comandos sensiveis com `watchedCommands`.
+- Broadcast de alertas para operadores online com `broadcastAlertsToOps`.
+- Log dedicado de alertas com `writeAlertLog`.
+- Envio opcional de alertas para Discord webhook.
+- Configuracoes `discordWebhookEnabled`, `discordWebhookUrl` e `discordWebhookUsername`.
+- Estatisticas de sessao por categoria e jogador.
+- Comando `/adminlogger stats`.
+
+### Melhorado
+
+- `/adminlogger status` agora mostra estado de alertas e Discord webhook.
+- Eventos registrados agora alimentam contadores de sessao automaticamente.
+- Alertas usam o mesmo sistema de idioma do mod.
+
+### Observacoes
+
+- Alertas ficam desligados por padrao para evitar spam em servidores existentes.
+- Nao publique `discordWebhookUrl`; trate como segredo.
+
+### Compatibilidade
+
+- Minecraft 1.21.1.
+- NeoForge 21.1.233 ou superior.
+- Java 21.
+
 ## 2.2.0-1.21.1 - Medium Operations Upgrade
 
 ### Adicionado

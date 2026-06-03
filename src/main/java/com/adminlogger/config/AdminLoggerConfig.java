@@ -21,6 +21,15 @@ public class AdminLoggerConfig {
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> IGNORED_PLAYERS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> IGNORED_WORLDS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> IGNORED_COMMANDS;
+    public static final ModConfigSpec.BooleanValue ENABLE_ALERTS;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> ALERT_EVENT_TYPES;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> WATCHED_PLAYERS;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> WATCHED_COMMANDS;
+    public static final ModConfigSpec.BooleanValue BROADCAST_ALERTS_TO_OPS;
+    public static final ModConfigSpec.BooleanValue WRITE_ALERT_LOG;
+    public static final ModConfigSpec.BooleanValue DISCORD_WEBHOOK_ENABLED;
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_URL;
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_USERNAME;
     public static final ModConfigSpec.BooleanValue MASK_SENSITIVE_COMMANDS;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> SENSITIVE_COMMAND_TERMS;
 
@@ -113,6 +122,54 @@ public class AdminLoggerConfig {
                         () -> java.util.List.of("login", "register", "l", "reg"),
                         value -> value instanceof String
                 );
+
+        ENABLE_ALERTS = BUILDER
+                .comment("Enable active alerts for watched players, commands, or event categories")
+                .define("enableAlerts", false);
+
+        ALERT_EVENT_TYPES = BUILDER
+                .comment("Event categories that should trigger alerts when alerts are enabled")
+                .defineListAllowEmpty(
+                        "alertEventTypes",
+                        () -> java.util.List.of("commands", "containers"),
+                        value -> value instanceof String
+                );
+
+        WATCHED_PLAYERS = BUILDER
+                .comment("Player names or UUIDs that should always trigger alerts")
+                .defineListAllowEmpty(
+                        "watchedPlayers",
+                        java.util.List::of,
+                        value -> value instanceof String
+                );
+
+        WATCHED_COMMANDS = BUILDER
+                .comment("Command roots that should trigger alerts when command logging is enabled")
+                .defineListAllowEmpty(
+                        "watchedCommands",
+                        () -> java.util.List.of("op", "deop", "ban", "pardon", "kick", "stop", "reload", "gamemode", "tp", "teleport"),
+                        value -> value instanceof String
+                );
+
+        BROADCAST_ALERTS_TO_OPS = BUILDER
+                .comment("Send alerts to online operators")
+                .define("broadcastAlertsToOps", true);
+
+        WRITE_ALERT_LOG = BUILDER
+                .comment("Write triggered alerts to the alerts log category")
+                .define("writeAlertLog", true);
+
+        DISCORD_WEBHOOK_ENABLED = BUILDER
+                .comment("Send alerts to a Discord webhook")
+                .define("discordWebhookEnabled", false);
+
+        DISCORD_WEBHOOK_URL = BUILDER
+                .comment("Discord webhook URL. Keep this private.")
+                .define("discordWebhookUrl", "", value -> value instanceof String);
+
+        DISCORD_WEBHOOK_USERNAME = BUILDER
+                .comment("Display username used by Discord webhook messages")
+                .define("discordWebhookUsername", "Admin Logger", AdminLoggerConfig::isNonBlankString);
 
         MASK_SENSITIVE_COMMANDS = BUILDER
                 .comment("Mask sensitive command arguments before logging")

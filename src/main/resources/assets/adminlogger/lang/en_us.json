@@ -24,5 +24,12 @@
     "status.log_format": "Log format: %s",
     "status.enabled_categories": "Enabled categories: %s",
     "status.global_index": "Global index enabled: %s",
-    "status.filters": "Active filters: %s players, %s worlds, %s commands"
+    "status.alerts": "Alerts enabled: %s | Discord webhook: %s",
+    "status.filters": "Active filters: %s players, %s worlds, %s commands",
+    "stats.header": "Admin Logger session stats:",
+    "stats.total": "Recorded events: %s",
+    "stats.categories": "Top categories: %s",
+    "stats.players": "Top players: %s",
+    "stats.none": "none",
+    "alert.message": "[ALERT] Player=%s Category=%s Event=%s"
 }

@@ -24,5 +24,12 @@
     "status.log_format": "Formato de logs: %s",
     "status.enabled_categories": "Categorias ativas: %s",
     "status.global_index": "Indice global ativo: %s",
-    "status.filters": "Filtros ativos: %s jogadores, %s mundos, %s comandos"
+    "status.alerts": "Alertas ativos: %s | Discord webhook: %s",
+    "status.filters": "Filtros ativos: %s jogadores, %s mundos, %s comandos",
+    "stats.header": "Estatisticas da sessao Admin Logger:",
+    "stats.total": "Eventos registrados: %s",
+    "stats.categories": "Top categorias: %s",
+    "stats.players": "Top jogadores: %s",
+    "stats.none": "nenhum",
+    "alert.message": "[ALERTA] Jogador=%s Categoria=%s Evento=%s"
 }

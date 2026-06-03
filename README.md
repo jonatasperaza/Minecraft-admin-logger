@@ -20,7 +20,11 @@ Admin Logger e um mod para administradores de servidores Minecraft que registra 
 - Logs em formato texto ou JSON Lines (`jsonl`)
 - Indice global em `logs/adminlogger/_global/` com todos os eventos do servidor
 - Diretorio, tamanho maximo de arquivo e pastas por UUID configuraveis
-- Comandos `/adminlogger reload` e `/adminlogger status`
+- Sistema de alertas por categoria, jogador observado ou comando observado
+- Alertas para operadores online
+- Alertas opcionais via Discord webhook
+- Estatisticas da sessao por categoria e jogador
+- Comandos `/adminlogger reload`, `/adminlogger status` e `/adminlogger stats`
 - Suporte a multiplos idiomas: ingles e portugues
 - Rotacao automatica de logs por tamanho configuravel
 
@@ -60,6 +64,15 @@ logTeleports = true
 ignoredPlayers = []
 ignoredWorlds = []
 ignoredCommands = ["login", "register", "l", "reg"]
+enableAlerts = false
+alertEventTypes = ["commands", "containers"]
+watchedPlayers = []
+watchedCommands = ["op", "deop", "ban", "pardon", "kick", "stop", "reload", "gamemode", "tp", "teleport"]
+broadcastAlertsToOps = true
+writeAlertLog = true
+discordWebhookEnabled = false
+discordWebhookUrl = ""
+discordWebhookUsername = "Admin Logger"
 maskSensitiveCommands = true
 sensitiveCommandTerms = ["password", "passwd", "senha", "token", "secret", "key", "apikey", "api_key", "webhook"]
 ```
@@ -70,13 +83,17 @@ Quando `logGlobalIndex = true`, todo evento tambem e escrito em `logs/adminlogge
 
 Use `logFormat = "jsonl"` se quiser processar os logs por ferramenta externa, dashboard ou script.
 
+Para ativar alertas, defina `enableAlerts = true`. Com `broadcastAlertsToOps = true`, operadores online recebem alertas no chat. Para enviar ao Discord, preencha `discordWebhookUrl` e ligue `discordWebhookEnabled = true`.
+
+Mantenha `discordWebhookUrl` privado. Se essa URL vazar, qualquer pessoa pode enviar mensagens no canal configurado.
+
 ## Build
 
 ```powershell
 .\gradlew.bat clean build
 ```
 
-O arquivo final fica em `build/libs/adminlogger-2.2.0.jar`.
+O arquivo final fica em `build/libs/adminlogger-2.3.0.jar`.
 
 ## Atualizando para novas versoes
 
