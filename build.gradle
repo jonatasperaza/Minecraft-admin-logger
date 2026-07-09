@@ -12,11 +12,17 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '1.4'
+version = '2.3.1'
 group = 'com.adminlogger'
 archivesBaseName = 'admin-logger'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
 minecraft {
     mappings channel: 'official', version: '1.20.1'
@@ -50,6 +56,7 @@ repositories {
         name = 'Minecraft'
         url = 'https://libraries.minecraft.net/'
     }
+    mavenCentral()
     maven {
         name = 'SpongePowered'
         url = 'https://repo.spongepowered.org/repository/maven-public/'
@@ -57,9 +64,14 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:1.20.1-47.1.0"
+    minecraft "net.minecraftforge:forge:1.20.1-47.4.20"
     
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
 }
 
 jar {

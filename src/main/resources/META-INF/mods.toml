@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/jonatasperaza/Minecraft-admin-logger/issues"
 
 [[mods]]
 modId="adminlogger"
-version="1.4"
+version="2.3.1"
 displayName="Admin Logger"
 updateJSONURL="https://github.com/jonatasperaza/Minecraft-admin-logger/raw/main/update.json"
 displayURL="https://github.com/jonatasperaza/Minecraft-admin-logger"
@@ -15,7 +15,9 @@ authors="jonatasperaza"
 description='''
 Logs administrativos para servidores Minecraft
 • Rastreamento de login/logout
-• Registro de chat/comandos
+• Registro de chat/comandos com mascara para dados sensiveis
+• Auditoria de blocos, containers, itens e teleportes
+• Filtros, logs JSONL, indice global, alertas e estatisticas
 • Suporte multilíngue
 '''
 
@@ -40,6 +42,6 @@ side="BOTH"
 [[dependencies.adminlogger]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20,1.21)"
+versionRange="[1.20.1,1.21)"
 ordering="NONE"
 side="BOTH"
